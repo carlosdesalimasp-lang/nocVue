@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minha Página Vue</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    h1 {
+      text-align: center;
+      color: #2d3748;
+      margin-bottom: 2rem;
+      font-size: 1.8rem;
+    }
+    .contador {
+      text-align: center;
+      padding: 1.5rem;
+      background: #f7fafc;
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+    }
+    .contador span {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #667eea;
+      margin: 0 1rem;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    button:hover {
+      transform: translateY(-1px);
+    }
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+    .btn-danger {
+      background: #e53e3e;
+      color: white;
+      padding: 0.3rem 0.6rem;
+      font-size: 0.85rem;
+    }
+    .btn-secondary {
+      background: #e2e8f0;
+      color: #2d3748;
+    }
+    .form-tarefa {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+    input {
+      flex: 1;
+      padding: 0.6rem 1rem;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: border 0.2s;
+    }
+    input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    ul {
+      list-style: none;
+    }
+    li {
+      padding: 0.8rem 1rem;
+      background: #f7fafc;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.3s;
+    }
+    li.concluida span {
+      text-decoration: line-through;
+      color: #a0aec0;
+    }
+    .li-tarefa {
+      cursor: pointer;
+    }
+    .info {
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid #e2e8f0;
+      text-align: center;
+      color: #718096;
+      font-size: 0.9rem;
+    }
+    .filtros {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="container">
+    <h1>📋 Gerenciador de Tarefas</h1>
+
+    <!-- Contador Interativo -->
+    <div class="contador">
+      <button class="btn-secondary" @click="decrementar">−</button>
+      <span>{{ contador }}</span>
+      <button class="btn-primary" @click="incrementar">+</button>
+      <p style="margin-top: 0.5rem; color: #718096; font-size: 0.9rem;">
+        Você clicou {{ contador }} vezes
+      </p>
+    </div>
+
+    <!-- Formulário de Tarefas -->
+    <form class="form-tarefa" @submit.prevent="adicionarTarefa">
+      <input 
+        v-model="novaTarefa" 
+        type="text" 
+        placeholder="Digite uma nova tarefa..."
+      >
+      <button class="btn-primary">Adicionar</button>
+    </form>
+
+    <!-- Filtros -->
+    <div class="filtros">
+      <button 
+        :class="filtro === 'todas' ? 'btn-primary' : 'btn-secondary'"
+        @click="filtro = 'todas'"
+      >Todas</button>
+      <button 
+        :class="filtro === 'ativas' ? 'btn-primary' : 'btn-secondary'"
+        @click="filtro = 'ativas'"
+      >Ativas</button>
+      <button 
+        :class="filtro === 'concluidas' ? 'btn-primary' : 'btn-secondary'"
+        @click="filtro = 'concluidas'"
+      >Concluídas</button>
+    </div>
+
+    <!-- Lista de Tarefas -->
+    <ul>
+      <li 
+        v-for="tarefa in tarefasFiltradas" 
+        :key="tarefa.id"
+        :class="{ concluida: tarefa.concluida }"
+      >
+        <span class="li-tarefa" @click="alternarConclusao(tarefa)">
+          {{ tarefa.concluida ? '✅' : '⬜' }} {{ tarefa.texto }}
+        </span>
+        <button class="btn-danger" @click="excluirTarefa(tarefa.id)">×</button>
+      </li>
+      <li v-if="tarefasFiltradas.length === 0" style="justify-content: center; color: #718096;">
+        Nenhuma tarefa encontrada 🎯
+      </li>
+    </ul>
+
+    <!-- Resumo -->
+    <div class="info">
+      <strong>Total:</strong> {{ tarefas.length }} | 
+      <strong>Concluídas:</strong> {{ tarefas.filter(t => t.concluida).length }} | 
+      <strong>Pendentes:</strong> {{ tarefas.filter(t => !t.concluida).length }}
+    </div>
+  </div>
+
+  <script>
+    const { createApp, reactive, computed, ref } = Vue
+
+    createApp({
+      setup() {
+        // Contador simples
+        const contador = ref(0)
+        const incrementar = () => contador.value++
+        const decrementar = () => contador.value--
+
+        // Lista de tarefas reativa
+        const proximoId = ref(1)
+        const novaTarefa = ref('')
+        const filtro = ref('todas')
+        const tarefas = reactive([])
+
+        const adicionarTarefa = () => {
+          if (novaTarefa.value.trim()) {
+            tarefas.push({
+              id: proximoId.value++,
+              texto: novaTarefa.value.trim(),
+              concluida: false
+            })
+            novaTarefa.value = ''
+          }
+        }
+
+        const alternarConclusao = (tarefa) => {
+          tarefa.concluida = !tarefa.concluida
+        }
+
+        const excluirTarefa = (id) => {
+          const indice = tarefas.findIndex(t => t.id === id)
+          if (indice !== -1) tarefas.splice(indice, 1)
+        }
+
+        // Lista computada (filtrada)
+        const tarefasFiltradas = computed(() => {
+          if (filtro.value === 'ativas') return tarefas.filter(t => !t.concluida)
+          if (filtro.value === 'concluidas') return tarefas.filter(t => t.concluida)
+          return tarefas
+        })
+
+        return {
+          contador, incrementar, decrementar,
+          novaTarefa, filtro, tarefas,
+          adicionarTarefa, alternarConclusao, excluirTarefa,
+          tarefasFiltradas
+        }
+      }
+    }).mount('#app')
+  </script>
+</body>
+</html>
